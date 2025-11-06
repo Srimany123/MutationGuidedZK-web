@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en" data-theme="light"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mutation-Guided Multi-Objective Optimization for Zero-Knowledge Parameterization</title>
+<link rel="stylesheet" href="styles.css">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+    svg: { fontCache: 'global' },
+    options: {
+      // process only elements with this class (even if they are <pre>/<code>)
+      processHtmlClass: 'mathjax',
+      // still ignore these tags unless they carry the class above
+      skipHtmlTags: ['script','noscript','style','textarea','pre','code']
+    }
+  };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <h1>Mutation-Guided Multi-Objective Optimization for Zero-Knowledge Parameterization</h1>
+      <p class="subtitle">Interleaving theory, formulas, and results — built from your run data</p>
+    </div>
+    <div class="actions">
+      <a class="btn" href="paper/research.pdf" target="_blank">Download PDF</a>
+      <a class="btn secondary" href="#results">Results</a>
+      <button class="theme-toggle" data-action="toggle-theme">🌙 Dark</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+<section id="abstract">
+  <h2>Abstract</h2>
+  <div class="card">
+    <p>
+      We present a decision-quality pipeline for selecting operating points in zero-knowledge (ZK) systems under
+      two competing objectives: <em>leakage resistance</em> and <em>implementation cost</em>. Using NSGA-II with
+      SBX crossover, self-adaptive Gaussian mutation, and a stagnation-aware kick, we recover a well-spread Pareto
+      frontier and a principled knee configuration. The leakage objective uses a linear-probe \(R^2\) on transcript features
+      as a conservative attacker model; the cost objective is a monotone proxy for runtime/footprint suitable for later
+      calibration with measured prover/verify metrics. From the recorded run, we quantify end-to-end changes, explain
+      the geometry of the search surface, and provide guidance for operational deployment.
+    </p>
+  </div>
+</section>
+
+<section id="problem">
+  <h2>Problem Statement</h2>
+  <div class="card">
+    <p>
+      Picking ZK parameters \(\theta=(a,b,c)\) that simultaneously minimize transcript leakage and resource usage is
+      inherently multi-objective. We make this explicit by optimizing \(L(\theta)\) (leakage) and \(C(\theta)\) (cost) jointly:
+      \( \min_{\theta\in\mathcal D} \ (L(\theta), C(\theta)) \).
+      The outcome is a set of <em>non-dominated</em> solutions (the Pareto frontier). We then select a robust default via a
+      <em>knee</em> that balances normalized objectives.
+    </p>
+    <blockquote class="note">
+      <strong>Leakage metric.</strong> Linear-probe \(R^2\) on transcript features (↓ better).<br>
+      <strong>Cost metric.</strong> Smooth proxy \(C(\theta)=w_t T(\theta)+w_m M(\theta)+w_o O(\theta)\) (↓ better).
+    </blockquote>
+  </div>
+</section>
+
+<section id="code">
+  <h2>Code, Assumptions, and Test Protocol</h2>
+  <div class="grid-fig">
+    <div class="card">
+      <h3>Assumed Inputs</h3>
+      <ul>
+        <li><code>generation_history.csv</code> with <code>[generation, leak_R2, cost, kick]</code></li>
+        <li><code>pareto_set.csv</code> with <code>[param_a, param_b, param_c, leak_R2, cost]</code></li>
+      </ul>
+      <h3>Genetic Operators</h3>
+      <ul>
+        <li>NSGA-II (fast non-dominated sorting + crowding distance)</li>
+        <li>SBX crossover (distribution index \(\eta_c\); preserves diversity)</li>
+        <li>Self-adaptive Gaussian mutation with log-normal step update</li>
+        <li>Stagnation-aware kick: multiply step by \(\kappa\!\ge\!1\) on no-improvement epochs</li>
+      </ul>
+      <h3>Test Protocol</h3>
+      <ul>
+        <li>Bounded domain \(\theta\in\mathcal D\subset\mathbb R^3\)</li>
+        <li>Leakage \(R^2\) via Ridge probe; cost proxy as above</li>
+        <li>Track generation metrics; extract Pareto frontier and knee</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Objective Formulas</h3>
+      <pre class="mathjax">
+Leakage: \( R^2 = 1 - \frac{\sum_i (x_i-\hat x_i)^2}{\sum_i (x_i-\bar x)^2} \)  (↓ better)
+Cost:    \( C(\theta) = w_t T(\theta) + w_m M(\theta) + w_o O(\theta) \)       (↓ better)
+Knee:    Normalize \(L,C \rightarrow \tilde L,\tilde C\); choose argmin \( \sqrt{\tilde L^2+\tilde C^2} \).
+SBX:     \( \hat x=\tfrac12[(1+\beta_q)x_1 + (1-\beta_q)x_2] \), \( \beta_q \) from \(\eta_c\).
+Mutation: \( \sigma'=\sigma\,e^{\tau_0 N(0,1)+\tau N_i(0,1)}\cdot\kappa \); reflect at bounds.
+      </pre>
+
+    </div>
+  </div>
+</section>
+
+<section id="kpis">
+  <h2>Key Outcomes</h2>
+  <div class="kpi">
+    <div class="card"><h3>Generations</h3><div class="big">40</div></div>
+    <div class="card"><h3>Leakage R²</h3>
+      <div>Start <strong>0.0490</strong> → End <strong>0.0482</strong></div>
+      <div class="note">Δ toward ↓ if positive: <strong>-1.60%</strong></div>
+    </div>
+    <div class="card"><h3>Cost</h3>
+      <div>Start <strong>0.3463</strong> → End <strong>0.0255</strong></div>
+      <div class="note">Δ: <strong>92.63%</strong></div>
+    </div>
+    <div class="card"><h3>Kick Usage</h3>
+      <div>Activations: <strong>12</strong></div>
+      <div class="note">Max: <strong>1.25</strong></div>
+    </div>
+  </div>
+</section>
+
+<section id="results">
+  <h2>Results &amp; Interleaved Theory</h2>
+
+  <!-- 1. Leakage vs generation -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/leak_vs_generation.png" alt="Leakage R² across generations">
+      <figcaption>Leakage R² across generations</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Leakage \(R^2\) across generations</h3>
+      <p>
+        We track a leakage proxy defined by the linear-probe coefficient of determination
+        \( R^2 = 1 - \tfrac{\sum_i (x_i-\hat{x}_i)^2}{\sum_i (x_i-\bar{x})^2} \).
+        Lower is better: a smaller \(R^2\) means transcript features explain less variance in the secret, so a linear attacker
+        requires more data and suffers higher error.
+      </p>
+      <p>
+        In this run, leakage moves from <strong>0.0490</strong> → <strong>0.0482</strong>. The absolute delta is intentionally
+        modest—at this regime the probe already performs poorly—so the important signal is the <em>shape</em>:
+        an early descent (easy wins), a mid-run plateau (search trades cost for diversity), and a later stabilization
+        near a floor under the linear attacker. This behavior aligns with NSGA-II’s elitism and the self-adaptive mutation schedule.
+      </p>
+      <ul>
+        <li><strong>Downward steps</strong> indicate configurations that decorrelate transcript statistics from the secret
+            (e.g., stronger blinding, less structured batching).</li>
+        <li><strong>Plateaus</strong> reflect frontier maintenance—no linear-probe gain without paying cost; see the kick plot for
+            targeted step expansion.</li>
+        <li><strong>Next</strong>: if policy demands even lower leakage, keep the optimizer but upgrade the probe
+            (kernel ridge / small MLP) to test non-linear leakage.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 2. Cost vs generation -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/cost_vs_generation.png" alt="Cost across generations">
+      <figcaption>Cost across generations</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Cost across generations</h3>
+      <p>
+        The cost axis is a monotone proxy \( C(\theta)=w_t T(\theta)+w_m M(\theta)+w_o O(\theta) \).
+        We observe a drop from <strong>0.3463</strong> → <strong>0.0255</strong> (<strong>−92.63%</strong>).
+        The steep early descent corresponds to removing dominant overheads that also benefit leakage (dual-improvement region).
+        The long flat tail indicates a tight frontier: further cost cuts would trade off leakage.
+      </p>
+      <ul>
+        <li><strong>Early slope</strong> = exploitation: many individuals reduce both \(L\) and \(C\).</li>
+        <li><strong>Tail</strong> = diversification: crowding distance preserves a spread of options to enable knee selection.</li>
+        <li><strong>Deployment</strong>: replace proxy with measured prover/verify wall-clock and peak memory to obtain a production S-curve.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 3. Kick (mutation scaling) -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/kick_vs_generation.png" alt="Stagnation-aware mutation kick">
+      <figcaption>Stagnation-aware mutation kick</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Stagnation-aware mutation kick</h3>
+      <p>
+        The kick multiplier engaged <strong>12</strong> time(s), peaking at <strong>1.25</strong>. We update per-gene step sizes via
+        \( \sigma'=\sigma\,e^{\tau_0 N(0,1)+\tau N_i(0,1)}\cdot\kappa \) and reflect at bounds.
+        Kicks are only applied on no-improvement windows, expanding exploration just enough to escape local basins without
+        collapsing the frontier.
+      </p>
+      <p class="note">Design rule: cap \(\kappa\) so that the expected one-step movement remains &lt;10% of the parameter range; this preserves stability.</p>
+    </div>
+  </div>
+
+  <!-- 4. Scatter cloud + Pareto overlay -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/cloud_with_pareto.png" alt="Cost vs Leakage with Pareto overlay">
+      <figcaption>Cost vs leakage with Pareto overlay</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Frontier geometry and knee selection</h3>
+      <p>
+        Blue samples show explored configurations; highlighted points are <em>non-dominated</em>.
+        The frontier quantifies the trade-off surface: points below-left are universally preferred.
+        We normalize each axis and choose the knee by minimizing distance to the origin
+        \( \operatorname*{argmin}_i\sqrt{\tilde L_i^2+\tilde C_i^2} \), producing a balanced default.
+      </p>
+      <p>
+        <em>Interpretation:</em> a convex-looking frontier indicates many mutually beneficial improvements are exhausted; a concave
+        frontier suggests residual “free lunch” zones. Here the mixed shape implies local free-lunch pockets at low cost and a sharp
+        shoulder near the knee.
+      </p>
+    </div>
+  </div>
+
+  <!-- 5. Contours over (a,b) -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/leakage_contours_ab.png" alt="Leakage contours over (a,b) at fixed c">
+      <figcaption>Leakage contours over \((a,b)\) at fixed \(c\)</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Local anisotropy (sensitivity)</h3>
+      <p>
+        Contours expose directions of unequal sensitivity. Gentle slopes mark robust directions (hyper-parameters less critical);
+        steep slopes demand tighter control and motivate anisotropic mutation. Self-adaptation naturally takes larger steps on flatter
+        axes and smaller steps along steep axes, improving convergence without sacrificing stability.
+      </p>
+      <p class="note">Operationally: lock down the steep axis with stricter bounds; allow wider auto-tuning on the flat axis.</p>
+    </div>
+  </div>
+
+  <!-- 6. 3D surface -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/leakage_surface_ab.png" alt="Leakage surface over (a,b) at fixed c">
+      <figcaption>Leakage surface over \((a,b)\) at fixed \(c\)</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Basins and ridges explain plateaus</h3>
+      <p>
+        The surface shows shallow basins separated by mild ridges—consistent with the plateau segments in the leakage curve.
+        Step-size adaptation plus occasional kicks are sufficient to traverse these features; no heavy restart policy is required.
+        If future surfaces show sharp cliffs, consider constraint softening or a two-phase schedule (global exploration → local polish).
+      </p>
+    </div>
+  </div>
+
+  <!-- 7. Pareto params 3D -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/pareto_params_3d.png" alt="3D parameter scatter on Pareto set">
+      <figcaption>3D parameter scatter on Pareto set</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Frontier support &amp; knee</h3>
+      <p>
+        The frontier is supported by multiple distinct \((a,b,c)\) combinations. The knee at index <strong>4</strong> achieves
+        leak <strong>0.048172</strong> and cost <strong>0.025540</strong> with
+        \( a=0.007789,\ b=0.003807,\ c=0.034663 \).
+        Having several near-knee neighbors is desirable operationally: it allows bounded tweaks (e.g., memory caps) without
+        falling off the frontier.
+      </p>
+    </div>
+  </div>
+
+  <!-- 8. Density view -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/density_cost_vs_leak.png" alt="Density of cost vs leakage">
+      <figcaption>Density of cost vs leakage</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Where the search invested effort</h3>
+      <p>
+        The density cloud highlights frequently visited regions and shoulder points. Mass concentration near the shoulder
+        indicates the optimizer repeatedly returns to balanced solutions—another signal that the knee is a stable choice.
+      </p>
+    </div>
+  </div>
+
+  <!-- 9. Running-min frontier -->
+  <div class="figrow">
+    <figure class="figure plain">
+      <img src="assets/running_min_frontier.png" alt="Empirical running-min frontier (cloud)">
+      <figcaption>Empirical running-min frontier (cloud)</figcaption>
+    </figure>
+    <div class="explain">
+      <h3>Sampling envelope sanity check</h3>
+      <p>
+        Sorting samples by cost and tracking the running minimum of leakage yields an empirical envelope that should lie above
+        or near the true frontier. Its shape here is compatible with the Pareto overlay, suggesting consistent sampling and no
+        major blind spots.
+      </p>
+    </div>
+  </div>
+
+  <!-- Interactive (kept as-is, styled by your CSS) -->
+  <h3>Interactive 3D</h3>
+  <h3>Interactive: Parameter Cloud + Pareto</h3>
+  <iframe src="assets/interactive_params_scatter.html" width="100%" height="520"></iframe>
+  <div class="explain">
+    <h3>How to read the 3D Parameter Cloud + Pareto</h3>
+    <p>
+      Every dot is one experiment at a parameter triple \( \theta=(a,b,c) \).
+      <strong>Blue points</strong> are all sampled configurations; <strong>red points</strong> are
+      <em>Pareto-optimal</em> (non-dominated) — no other configuration beats them on both leakage and cost.
+      Hover a point to see its measured <code>leakR2</code> and <code>cost</code>.
+    </p>
+    <p><em>Why 3D?</em> The search space is genuinely three-parameter. In 2D projections
+      (\(a\)–\(b\), \(a\)–\(c\), \(b\)–\(c\)) interactions get flattened and can look
+      falsely monotone. The 3D view shows:
+    </p>
+    <ul>
+      <li><strong>Clusters</strong> of viable regions: groups of points where many \(\theta\) produce similar (leak, cost).</li>
+      <li><strong>Ridges/voids</strong> in parameter space: directions that almost never yield good trade-offs.</li>
+      <li><strong>Frontier support</strong>: whether your Pareto red points cover a broad part of the cube (healthy diversity) or sit on a thin shelf (brittle).</li>
+    </ul>
+    <p>
+      <em>What to look for:</em> rotate to check if the red Pareto set forms a <q>bowed arc</q> through the cloud.
+      A smooth arc implies stable trade-offs; a broken or branched arc suggests multiple regimes you might want to
+      document as alternative presets (e.g., <q>low-cost</q> vs <q>low-leak</q>).
+    </p>
+    <p class="note">
+      <strong>Actionable:</strong> Use the 3D scatter to set <em>bounded ranges</em> for each parameter:
+      trim away volumes with no red (Pareto) presence and seed future runs with priors near the red arc.
+    </p>
+  </div>
+
+  <h3>Interactive: Leakage Surface (a,b)</h3>
+  <iframe src="assets/interactive_leak_surface.html" width="100%" height="520"></iframe>
+
+  <div class="explain">
+    <h3>How to read the Interactive Leakage Surface</h3>
+    <p>
+      This is the function \(L(a,b\,|\,c^\ast)\) — leakage (vertical axis) as you vary \(a\) and \(b\) with \(c\) fixed to your knee.
+      It’s the 3D counterpart of a contour plot: rotate to see <strong>valleys</strong> (good) and <strong>ridges</strong> (bad).
+    </p>
+    <p>
+      <strong>Local sensitivity.</strong> Steep regions mean small errors in \(a\) or \(b\) change leakage a lot.
+      Flat regions are robust. Formally, the gradient \( \nabla L = \bigl[\tfrac{\partial L}{\partial a},\tfrac{\partial L}{\partial b}\bigr] \)
+      encodes slope and the Hessian’s top eigenvector shows the most sensitive direction. Qualitatively:
+    </p>
+    <ul>
+      <li><strong>Wide, shallow basins</strong> → forgiving defaults; mutation can take larger steps.</li>
+      <li><strong>Narrow gullies</strong> → tight tolerances; reduce mutation step size or clamp bounds.</li>
+      <li><strong>Plateaus</strong> → expect optimizer stagnation unless you introduce kicks (visible in your history).</li>
+    </ul>
+    <p>
+      <em>Why 3D?</em> In 2D you can’t see joint curvature: a ridge that is gentle in \(a\) and gentle in \(b\)
+      can still be sharp along some diagonal combination. The surface view makes these <q>diagonal cliffs</q> obvious.
+    </p>
+    <p class="note">
+      <strong>Rule of thumb:</strong> pick operating points in <em>wide basins</em> even if they are a hair above the absolute minimum —
+      you gain robustness to drift and hardware noise with negligible leakage penalty.
+    </p>
+  </div>
+
+  <h3>Interactive: Trajectory</h3>
+  <iframe src="assets/interactive_knee_trajectory.html" width="100%" height="420"></iframe>
+
+  <div class="explain">
+    <h3>How to read the Animated Knee Trajectory</h3>
+    <p>
+      Each frame plots the current <q>knee candidate</q> in parameter space as the optimizer advances.
+      You’re seeing <strong>where</strong> in \((a,b,c)\) the balanced solution lives over generations.
+    </p>
+    <ul>
+      <li><strong>Long, smooth moves</strong> early → exploitation of easy wins, often accompanied by sharp cost drops.</li>
+      <li><strong>Stutters/pauses</strong> → frontier polishing; typically coincide with flat segments in the leakage curve.</li>
+      <li><strong>Small jumps after stalls</strong> → effect of the mutation <em>kick</em>; good sign you’re escaping shallow basins.</li>
+    </ul>
+    <p>
+      <em>Convergence heuristic.</em> Track the path length \( S=\sum_t \lVert \theta_{t+1}-\theta_t\rVert_2 \).
+      When \( \lVert \theta_{t+1}-\theta_t\rVert_2 \) stays below a small threshold for several frames <em>and</em> your knee’s
+      normalized distance \( \sqrt{\tilde L^2+\tilde C^2} \) no longer improves, the run has stabilized.
+    </p>
+    <p class="note">
+      <strong>Why 3D?</strong> The knee can shift mainly along one parameter (say, \(c\)) while appearing stable in 2D projections.
+      The trajectory reveals which parameter is still <em>active</em>, guiding which bounds to tighten and where to focus ablations.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Why 3D matters for ZK parameter tuning</h3>
+    <p>
+      ZK systems often have <em>interacting</em> knobs: a setting that looks safe for \(a\) at one \(b\) can leak at another.
+      3D views prevent false conclusions from flattened 2D slices by exposing clusters, ridges, and multiregime structure in the
+      full \((a,b,c)\) space. Practically, this lets you (i) prune dead volumes, (ii) pick robust basins over brittle minima, and
+      (iii) document alternate presets when the Pareto set branches.
+    </p>
+  </div>
+
+  <h3>Pareto Knee Summary</h3>
+  <div class="card">
+    <div style="overflow:auto">
+      <table>
+        <thead><tr><th>Knee idx</th><th>Leak R²</th><th>Cost</th><th>a</th><th>b</th><th>c</th><th>Pareto size</th></tr></thead>
+        <tbody><tr>
+          <td>4</td><td>0.048172</td><td>0.025540</td>
+          <td>0.007789</td><td>0.003807</td><td>0.034663</td><td>7</td>
+        </tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<footer>© Sriman 2025 Mutation-guided ZK Optimization</footer>
+<script src="theme.js"></script>
+</body></html>

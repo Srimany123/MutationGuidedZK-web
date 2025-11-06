@@ -1,0 +1,163 @@
+/* ===========================
+   Theme & Base
+   =========================== */
+:root{
+  --bg:#0b0d12;
+  --card:#0f1420;
+  --ink:#e7edf7;
+  --muted:#97a3b6;
+  --line:#1e2633;
+  --brand:#5b8cff;
+  --accent:#00d3a7;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --bg:#fafafa;
+  --card:#ffffff;
+  --ink:#0d0d0d;
+  --muted:#475467;
+  --line:#eaecf0;
+  --brand:#3b6dff;
+  --accent:#00b894;
+  --shadow:0 8px 24px rgba(16,24,40,.08);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#fafafa; --card:#ffffff; --ink:#0d0d0d; --muted:#475467;
+    --line:#eaecf0; --brand:#3b6dff; --accent:#00b894; --shadow:0 8px 24px rgba(16,24,40,.08);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* ===========================
+   Header
+   =========================== */
+header{
+  padding:2.4rem 1rem 2rem;
+  position:sticky; top:0; z-index:20;
+  backdrop-filter:saturate(150%) blur(8px);
+  background:linear-gradient(180deg,rgba(91,140,255,.12),rgba(0,0,0,0));
+  border-bottom:1px solid var(--line);
+}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px}
+.brand{flex:1}
+h1{margin:0 0 .25rem 0;font-size:1.9rem;letter-spacing:.2px}
+.subtitle{color:var(--muted);margin:.15rem 0 0 0;font-size:.98rem}
+.theme-toggle{
+  appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  padding:.55rem .8rem;border-radius:10px;cursor:pointer;box-shadow:var(--shadow)
+}
+
+/* ===========================
+   Layout
+   =========================== */
+.container{max-width:1160px;margin:1.6rem auto;padding:0 1rem}
+section{margin:2rem 0}
+section>h2{border-bottom:1px solid var(--line);padding-bottom:.45rem;font-size:1.25rem;margin:0 0 .9rem}
+
+/* KPI cards (can be used elsewhere as well) */
+.kpi{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px}
+@media (max-width:980px){.kpi{grid-template-columns:repeat(2,1fr)}}
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:var(--shadow);
+}
+.kpi .card h3{margin:.1rem 0 .35rem;font-size:.95rem;color:var(--muted)}
+.kpi .card .big{font-size:1.6rem;font-weight:700}
+
+/* ===========================
+   Clean Figure + Explanation rows
+   =========================== */
+/* 2-column row that collapses on mobile */
+.figrow{
+  display:grid;
+  grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);
+  gap:20px;
+  align-items:start;
+  margin:18px 0 28px;
+}
+@media (max-width:900px){ .figrow{ grid-template-columns:1fr } }
+
+/* Borderless figure container; image keeps a thin border only */
+figure{margin:0}
+.figure.plain{
+  border:none; background:transparent; box-shadow:none; padding:0;
+}
+.figure.plain img{
+  width:100%; height:auto; display:block; object-fit:contain;
+  /* keep big plots inside the viewport */
+  max-height:clamp(260px, 62vh, 760px);
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+}
+/* Optional shape helpers if needed per-figure */
+.figure.portrait img{ max-height:clamp(320px, 75vh, 880px) }
+.figure.landscape img{ max-height:clamp(240px, 58vh, 700px) }
+
+.figure.plain figcaption{
+  border-top:none; padding:8px 2px 0 2px;
+  color:var(--muted); font-size:.9rem;
+}
+
+/* The explanation text column with no bubble */
+.explain{
+  background:transparent; border:none; box-shadow:none; padding:0;
+  max-width:72ch;  /* improves readability; remove if you want full width */
+}
+.explain h3{ margin:.25rem 0 .5rem; font-size:1.05rem; font-weight:600 }
+.explain p{ margin:.35rem 0 }
+
+/* ===========================
+   Tables & Iframes
+   =========================== */
+table{
+  width:100%; border-collapse:collapse; background:var(--card);
+  border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:var(--shadow)
+}
+th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:600}
+
+.iframe-wrap{
+  border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  box-shadow:var(--shadow); background:var(--card); margin:12px 0;
+}
+iframe{
+  width:100%;
+  height:clamp(360px, 58vh, 720px);
+  display:block; border:none; background:var(--card);
+}
+
+/* ===========================
+   Utilities
+   =========================== */
+blockquote{
+  border-left:4px solid var(--brand);
+  background:color-mix(in srgb, var(--brand) 14%, transparent);
+  padding:.5rem .9rem; border-radius:8px; margin:.6rem 0;
+}
+.btn{
+  display:inline-block; padding:.6rem 1rem; border-radius:10px;
+  border:1px solid var(--line); background:var(--brand); color:#fff; text-decoration:none; box-shadow:var(--shadow)
+}
+.btn.secondary{ background:transparent; color:var(--ink) }
+.actions{ display:flex; gap:.6rem; flex-wrap:wrap }
+.note{ color:var(--muted); font-size:.95rem }
+
+footer{
+  text-align:center; padding:1.6rem;
+  border-top:1px solid var(--line); color:var(--muted)
+}
